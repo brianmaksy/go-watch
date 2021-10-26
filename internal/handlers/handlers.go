@@ -2,18 +2,19 @@ package handlers
 
 import (
 	"fmt"
-	"github.com/CloudyKit/jet/v6"
-	"github.com/go-chi/chi"
-	"github.com/tsawler/vigilate/internal/config"
-	"github.com/tsawler/vigilate/internal/driver"
-	"github.com/tsawler/vigilate/internal/helpers"
-	"github.com/tsawler/vigilate/internal/models"
-	"github.com/tsawler/vigilate/internal/repository"
-	"github.com/tsawler/vigilate/internal/repository/dbrepo"
 	"log"
 	"net/http"
 	"runtime/debug"
 	"strconv"
+
+	"github.com/CloudyKit/jet/v6"
+	"github.com/brianmaksy/go-watch/internal/config"
+	"github.com/brianmaksy/go-watch/internal/driver"
+	"github.com/brianmaksy/go-watch/internal/helpers"
+	"github.com/brianmaksy/go-watch/internal/models"
+	"github.com/brianmaksy/go-watch/internal/repository"
+	"github.com/brianmaksy/go-watch/internal/repository/dbrepo"
+	"github.com/go-chi/chi"
 )
 
 //Repo is the repository
@@ -42,7 +43,7 @@ func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
 
 // AdminDashboard displays the dashboard
 func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
-	vars := make(jet.VarMap)
+	vars := make(jet.VarMap) // jet template rendering engine.
 	vars.Set("no_healthy", 0)
 	vars.Set("no_problem", 0)
 	vars.Set("no_pending", 0)

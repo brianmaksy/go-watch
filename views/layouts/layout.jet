@@ -8,7 +8,7 @@
 
     <link rel="shortcut icon" href="/static/admin/img/icons/icon-48x48.png"/>
 
-    <title>Vigilate</title>
+    <title>go_watch</title>
 
     <!-- required css -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4@3.1.4/bootstrap-4.min.css">
@@ -46,7 +46,7 @@
         <div class="sidebar-content js-simplebar">
             <a class="sidebar-brand text-center" href="/">
                 <span class="align-middle">
-                    <span class="fa fa-eye"></span> Vigilate
+                    <span class="fa fa-eye"></span> go_watch
                 </span>
             </a>
 
@@ -145,7 +145,7 @@
                     </div>
                     <div class="col-6 text-right">
                         <p class="mb-0">
-                            <a href="index.html" class="text-muted"><strong><span class="fa fa-eye"></span> Vigilate</strong></a>
+                            <a href="index.html" class="text-muted"><strong><span class="fa fa-eye"></span> go_watch</strong></a>
                         </p>
                     </div>
                 </div>

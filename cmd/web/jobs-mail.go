@@ -3,14 +3,15 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/aymerick/douceur/inliner"
-	"github.com/tsawler/vigilate/internal/channeldata"
-	mail "github.com/xhit/go-simple-mail/v2"
 	"html/template"
-	"jaytaylor.com/html2text"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/aymerick/douceur/inliner"
+	"github.com/brianmaksy/go-watch/internal/channeldata"
+	mail "github.com/xhit/go-simple-mail/v2"
+	"jaytaylor.com/html2text"
 )
 
 // NewWorker takes a numeric id and a channel w/ worker pool.
@@ -57,6 +58,7 @@ func (w Worker) stop() {
 }
 
 // NewDispatcher creates, and returns a new Dispatcher object.
+// gorilla pattern. Ensures only 5 will go at a time, though can support thousands.
 func NewDispatcher(jobQueue chan channeldata.MailJob, maxWorkers int) *Dispatcher {
 	workerPool := make(chan chan channeldata.MailJob, maxWorkers)
 	return &Dispatcher{

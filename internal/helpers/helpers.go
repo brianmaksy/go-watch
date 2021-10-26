@@ -2,16 +2,17 @@ package helpers
 
 import (
 	"fmt"
-	"github.com/CloudyKit/jet/v6"
-	"github.com/justinas/nosurf"
-	"github.com/tsawler/vigilate/internal/config"
-	"github.com/tsawler/vigilate/internal/models"
-	"github.com/tsawler/vigilate/internal/templates"
 	"log"
 	"math/rand"
 	"net/http"
 	"runtime/debug"
 	"time"
+
+	"github.com/CloudyKit/jet/v6"
+	"github.com/brianmaksy/go-watch/internal/config"
+	"github.com/brianmaksy/go-watch/internal/models"
+	"github.com/brianmaksy/go-watch/internal/templates"
+	"github.com/justinas/nosurf"
 )
 
 const (
@@ -83,7 +84,7 @@ func DefaultData(td templates.TemplateData, r *http.Request, w http.ResponseWrit
 		td.User = u
 	}
 
-	td.Flash = app.Session.PopString(r.Context(), "flash")
+	td.Flash = app.Session.PopString(r.Context(), "flash") // NTS - r.Context() connects js frontend and go backend?
 	td.Warning = app.Session.PopString(r.Context(), "warning")
 	td.Error = app.Session.PopString(r.Context(), "error")
 
@@ -97,7 +98,7 @@ func RenderPage(w http.ResponseWriter, r *http.Request, templateName string, var
 	if variables == nil {
 		vars = make(jet.VarMap)
 	} else {
-		vars = variables.(jet.VarMap)
+		vars = variables.(jet.VarMap) // [NTS- access given item within vars/varMap interface]
 	}
 
 	// add default template data

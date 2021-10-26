@@ -1,12 +1,13 @@
 package config
 
 import (
+	"html/template"
+
 	"github.com/alexedwards/scs/v2"
+	"github.com/brianmaksy/go-watch/internal/channeldata"
+	"github.com/brianmaksy/go-watch/internal/driver"
 	"github.com/pusher/pusher-http-go"
 	"github.com/robfig/cron/v3"
-	"github.com/tsawler/vigilate/internal/channeldata"
-	"github.com/tsawler/vigilate/internal/driver"
-	"html/template"
 )
 
 // AppConfig holds application configuration

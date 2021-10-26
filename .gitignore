@@ -3,6 +3,6 @@ database.yml
 schema.sql
 run.sh
 run.bat
-vigilate
+go_watch
 .DS_Store
 *.code-workspace

@@ -1,20 +1,21 @@
 package main
 
 import (
-	"github.com/go-chi/chi"
-	"github.com/tsawler/vigilate/internal/handlers"
 	"net/http"
+
+	"github.com/brianmaksy/go-watch/internal/handlers"
+	"github.com/go-chi/chi"
 )
 
 func routes() http.Handler {
 
 	mux := chi.NewRouter()
 
-	// default middleware
+	// loading default middleware
 	mux.Use(SessionLoad)
 	mux.Use(RecoverPanic)
 	mux.Use(NoSurf)
-	mux.Use(CheckRemember)
+	mux.Use(CheckRemember) // to verifies if someone has checked remember me -> logs in automatically.
 
 	// login
 	mux.Get("/", handlers.Repo.LoginScreen)
@@ -22,7 +23,15 @@ func routes() http.Handler {
 
 	mux.Get("/user/logout", handlers.Repo.Logout)
 
-	// admin routes
+	// test route
+	mux.Get("/pusher-test", handlers.Repo.TestPusher)
+
+	mux.Route("/pusher", func(mux chi.Router) {
+		mux.Use(Auth) // privileged access
+		mux.Post("/auth", handlers.Repo.PusherAuth)
+	})
+
+	// admin routes - protected.
 	mux.Route("/admin", func(mux chi.Router) {
 		// all admin routes are protected
 		mux.Use(Auth)

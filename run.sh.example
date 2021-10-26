@@ -1,9 +1,9 @@
 #!/bin/zsh
 
 # This is the bare minimum to run in development. For full list of flags,
-# run ./vigilate -help
+# run ./go_watch -help
 
-go build -o vigilate cmd/web/*.go && ./vigilate \
+go build -o go_watch cmd/web/*.go && ./go_watch \
 -dbuser='someuser' \
 -pusherHost='pusher.com' \
 -pusherKey='abc123' \

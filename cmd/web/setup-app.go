@@ -3,31 +3,32 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/alexedwards/scs/postgresstore"
-	"github.com/alexedwards/scs/v2"
-	"github.com/pusher/pusher-http-go"
-	"github.com/tsawler/vigilate/internal/channeldata"
-	"github.com/tsawler/vigilate/internal/config"
-	"github.com/tsawler/vigilate/internal/driver"
-	"github.com/tsawler/vigilate/internal/handlers"
-	"github.com/tsawler/vigilate/internal/helpers"
 	"log"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/alexedwards/scs/postgresstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/brianmaksy/go-watch/internal/channeldata"
+	"github.com/brianmaksy/go-watch/internal/config"
+	"github.com/brianmaksy/go-watch/internal/driver"
+	"github.com/brianmaksy/go-watch/internal/handlers"
+	"github.com/brianmaksy/go-watch/internal/helpers"
+	"github.com/pusher/pusher-http-go"
 )
 
 func setupApp() (*string, error) {
 	// read flags
 	insecurePort := flag.String("port", ":4000", "port to listen on")
-	identifier := flag.String("identifier", "vigilate", "unique identifier")
+	identifier := flag.String("identifier", "go_watch", "unique identifier")
 	domain := flag.String("domain", "localhost", "domain name (e.g. example.com)")
 	inProduction := flag.Bool("production", false, "application is in production")
 	dbHost := flag.String("dbhost", "localhost", "database host")
 	dbPort := flag.String("dbport", "5432", "database port")
 	dbUser := flag.String("dbuser", "", "database user")
 	dbPass := flag.String("dbpass", "", "database password")
-	databaseName := flag.String("db", "vigilate", "database name")
+	databaseName := flag.String("db", "go_watch", "database name")
 	dbSsl := flag.String("dbssl", "disable", "database ssl setting")
 	pusherHost := flag.String("pusherHost", "", "pusher host")
 	pusherPort := flag.String("pusherPort", "443", "pusher port")
@@ -43,6 +44,7 @@ func setupApp() (*string, error) {
 		os.Exit(1)
 	}
 
+	// only postgres - repository pattern.
 	log.Println("Connecting to database....")
 	dsnString := ""
 
@@ -64,6 +66,7 @@ func setupApp() (*string, error) {
 			*dbSsl)
 	}
 
+	// pinging.
 	db, err := driver.ConnectPostgres(dsnString)
 	if err != nil {
 		log.Fatal("Cannot connect to database!", err)
@@ -81,22 +84,22 @@ func setupApp() (*string, error) {
 
 	// start mail channel
 	log.Println("Initializing mail channel and worker pool....")
-	mailQueue := make(chan channeldata.MailJob, maxWorkerPoolSize)
+	mailQueue := make(chan channeldata.MailJob, maxWorkerPoolSize) // set to be 5 now.
 
 	// Start the email dispatcher
 	log.Println("Starting email dispatcher....")
 	dispatcher := NewDispatcher(mailQueue, maxJobMaxWorkers)
 	dispatcher.run()
 
-	// define application configuration
+	// define application configuration - share across application.
 	a := config.AppConfig{
 		DB:           db,
 		Session:      session,
 		InProduction: *inProduction,
 		Domain:       *domain,
-		PusherSecret: *pusherSecret,
+		PusherSecret: *pusherSecret, // default: 123abc etc
 		MailQueue:    mailQueue,
-		Version:      vigilateVersion,
+		Version:      go_watchVersion,
 		Identifier:   *identifier,
 	}
 
@@ -106,7 +109,7 @@ func setupApp() (*string, error) {
 	handlers.NewHandlers(repo, &app)
 
 	log.Println("Getting preferences...")
-	preferenceMap = make(map[string]string)
+	preferenceMap = make(map[string]string) // [NTS - strictly speaking not needed since declared in main.go already?]
 	preferences, err := repo.DB.AllPreferences()
 	if err != nil {
 		log.Fatal("Cannot read preferences:", err)
@@ -120,11 +123,11 @@ func setupApp() (*string, error) {
 	preferenceMap["pusher-port"] = *pusherPort
 	preferenceMap["pusher-key"] = *pusherKey
 	preferenceMap["identifier"] = *identifier
-	preferenceMap["version"] = vigilateVersion
+	preferenceMap["version"] = go_watchVersion
 
 	app.PreferenceMap = preferenceMap
 
-	// create pusher client
+	// create pusher client. The official Go library for pusher. Use local pusher clone instead.
 	wsClient = pusher.Client{
 		AppID:  *pusherApp,
 		Secret: *pusherSecret,

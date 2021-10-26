@@ -2,16 +2,17 @@ package main
 
 import (
 	"encoding/gob"
-	"github.com/alexedwards/scs/v2"
-	"github.com/pusher/pusher-http-go"
-	"github.com/tsawler/vigilate/internal/config"
-	"github.com/tsawler/vigilate/internal/handlers"
-	"github.com/tsawler/vigilate/internal/models"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/alexedwards/scs/v2"
+	"github.com/brianmaksy/go-watch/internal/config"
+	"github.com/brianmaksy/go-watch/internal/handlers"
+	"github.com/brianmaksy/go-watch/internal/models"
+	"github.com/pusher/pusher-http-go"
 )
 
 var app config.AppConfig
@@ -20,12 +21,14 @@ var session *scs.SessionManager
 var preferenceMap map[string]string
 var wsClient pusher.Client
 
-const vigilateVersion = "1.0.0"
+const go_watchVersion = "1.0.0"
 const maxWorkerPoolSize = 5
 const maxJobMaxWorkers = 5
 
 func init() {
+	// type that holds admin users
 	gob.Register(models.User{})
+	// set timezone
 	_ = os.Setenv("TZ", "America/Halifax")
 }
 
@@ -43,7 +46,7 @@ func main() {
 
 	// print info
 	log.Printf("******************************************")
-	log.Printf("** %sVigilate%s v%s built in %s", "\033[31m", "\033[0m", vigilateVersion, runtime.Version())
+	log.Printf("** %sgo_watch%s v%s built in %s", "\033[31m", "\033[0m", go_watchVersion, runtime.Version())
 	log.Printf("**----------------------------------------")
 	log.Printf("** Running with %d Processors", runtime.NumCPU())
 	log.Printf("** Running on %s", runtime.GOOS)
