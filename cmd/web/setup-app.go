@@ -16,6 +16,7 @@ import (
 	"github.com/brianmaksy/go-watch/internal/handlers"
 	"github.com/brianmaksy/go-watch/internal/helpers"
 	"github.com/pusher/pusher-http-go"
+	"github.com/robfig/cron/v3"
 )
 
 func setupApp() (*string, error) {
@@ -105,8 +106,9 @@ func setupApp() (*string, error) {
 
 	app = a
 
-	repo = handlers.NewPostgresqlHandlers(db, &app)
-	handlers.NewHandlers(repo, &app)
+	repo = handlers.NewPostgresqlHandlers(db, &app) // nts - call this first (one var)
+	handlers.NewHandlers(repo, &app)                // nts - then use the declared repo here.
+	// nts - repo has access to both repository.DatabaseRepo methods and appconfig params.
 
 	log.Println("Getting preferences...")
 	preferenceMap = make(map[string]string) // [NTS - strictly speaking not needed since declared in main.go already?]
@@ -140,6 +142,20 @@ func setupApp() (*string, error) {
 	log.Println("Secure", *pusherSecure)
 
 	app.WsClient = wsClient
+	// nts - since we can't assign entry to nil map (called in start-monitoring.go)
+	monitorMap := make(map[int]cron.EntryID)
+	app.MonitorMap = monitorMap
+
+	// create a timer - wil hold our schedule
+	localZone, _ := time.LoadLocation("Local")
+	scheduler := cron.New(cron.WithLocation(localZone), cron.WithChain(
+		cron.DelayIfStillRunning(cron.DefaultLogger),
+		cron.Recover(cron.DefaultLogger),
+	))
+	app.Scheduler = scheduler
+	// NTS - need to run this now. start-monitoring.go
+
+	go handlers.Repo.StartMonitoring()
 
 	helpers.NewHelpers(&app)
 

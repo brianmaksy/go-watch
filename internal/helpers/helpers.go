@@ -107,7 +107,7 @@ func RenderPage(w http.ResponseWriter, r *http.Request, templateName string, var
 		td = data.(templates.TemplateData)
 	}
 
-	// add default data
+	// add default data - nts: including preferenceMap - see above.
 	td = DefaultData(td, r, w)
 
 	// add template functions

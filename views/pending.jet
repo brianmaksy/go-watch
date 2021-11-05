@@ -9,7 +9,6 @@
     Pending Services
 {{end}}
 
-
 {{block cardContent()}}
     <div class="row">
         <div class="col">
@@ -35,9 +34,28 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr>
-                    <td colspan="5">No services</td>
-                </tr>
+                {{if len(host_services) > 0 }}
+                    {{range host_services}}
+                    <tr>
+                        <td>
+                            <a href="/admin/host/{{.HostID}}#pending-content">
+                            {{.HostName}}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{.Service.ServiceName}}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-dark">{{.Status}}</span> 
+                        </td>
+                        <td>    </td>
+                    </tr>
+                    {{end}}
+                {{else}}
+                    <tr>
+                        <td colspan="4">No services</td>
+                    </tr>
+                {{end}}
                 </tbody>
             </table>
         </div>

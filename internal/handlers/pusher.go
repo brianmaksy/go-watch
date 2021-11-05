@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -15,7 +15,7 @@ func (repo *DBRepo) PusherAuth(w http.ResponseWriter, r *http.Request) {
 
 	u, _ := repo.DB.GetUserById(userID)
 
-	params, _ := ioutil.ReadAll(r.Body)
+	params, _ := io.ReadAll(r.Body)
 
 	presenceData := pusher.MemberData{
 		UserID: strconv.Itoa(userID),
@@ -35,14 +35,14 @@ func (repo *DBRepo) PusherAuth(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(response)
 }
 
-func (repo *DBRepo) TestPusher(w http.ResponseWriter, r *http.Request) {
-	// have it send something to the client
-	data := make(map[string]string)
-	data["message"] = "Hello, world"
-	// push something use ws client in app.config
-	// NTS - not handlers.repo.App because we're in the handlers package.
-	err := repo.App.WsClient.Trigger("public-channel", "test-event", data) // payload
-	if err != nil {
-		log.Println(err)
-	}
-}
+// func (repo *DBRepo) TestPusher(w http.ResponseWriter, r *http.Request) {
+// 	// have it send something to the client
+// 	data := make(map[string]string)
+// 	data["message"] = "Hello, world"
+// 	// push something use ws client in app.config
+// 	// NTS - not handlers.repo.App because we're in the handlers package.
+// 	err := repo.App.WsClient.Trigger("public-channel", "test-event", data) // payload
+// 	if err != nil {
+// 		log.Println(err)
+// 	}
+// }

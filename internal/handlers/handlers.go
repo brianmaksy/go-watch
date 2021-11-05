@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"github.com/brianmaksy/go-watch/internal/models"
 	"github.com/brianmaksy/go-watch/internal/repository"
 	"github.com/brianmaksy/go-watch/internal/repository/dbrepo"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 //Repo is the repository
@@ -29,7 +30,7 @@ type DBRepo struct {
 
 // NewHandlers creates the handlers
 func NewHandlers(repo *DBRepo, a *config.AppConfig) {
-	Repo = repo
+	Repo = repo // Repo set to be equal to the database repo (containing postgresDBRepo and &appconfig )
 	app = a
 }
 
@@ -43,13 +44,25 @@ func NewPostgresqlHandlers(db *driver.DB, a *config.AppConfig) *DBRepo {
 
 // AdminDashboard displays the dashboard
 func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
-	vars := make(jet.VarMap) // jet template rendering engine.
-	vars.Set("no_healthy", 0)
-	vars.Set("no_problem", 0)
-	vars.Set("no_pending", 0)
-	vars.Set("no_warning", 0)
+	pending, healthy, warning, problem, err := repo.DB.GetAllServiceStatusCounts()
+	if err != nil {
+		log.Println(err)
+		return
+	}
 
-	err := helpers.RenderPage(w, r, "dashboard", vars, nil)
+	vars := make(jet.VarMap) // jet template rendering engine.
+	vars.Set("no_healthy", healthy)
+	vars.Set("no_problem", problem)
+	vars.Set("no_pending", pending)
+	vars.Set("no_warning", warning)
+
+	allHosts, err := repo.DB.AllHosts()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	vars.Set("hosts", allHosts)
+	err = helpers.RenderPage(w, r, "dashboard", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
@@ -120,7 +133,17 @@ func (repo *DBRepo) PostSettings(w http.ResponseWriter, r *http.Request) {
 
 // AllHosts displays list of all hosts
 func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r, "hosts", nil, nil)
+	// get all hosts from DB
+	hosts, err := repo.DB.AllHosts()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	// send "hosts" data to template
+	vars := make(jet.VarMap)
+	vars.Set("hosts", hosts)
+
+	err = helpers.RenderPage(w, r, "hosts", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
@@ -128,10 +151,84 @@ func (repo *DBRepo) AllHosts(w http.ResponseWriter, r *http.Request) {
 
 // Host shows the host add/edit form
 func (repo *DBRepo) Host(w http.ResponseWriter, r *http.Request) {
-	err := helpers.RenderPage(w, r, "host", nil, nil)
+	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+
+	var h models.Host
+
+	// NTS - if id > what exists in database, will get sql: no rows in result set error. Breaking pt is here.
+	// NTS - if comment the if chunk out, then admin/host/x -> x can be anything!
+	if id > 0 {
+		// get the host from the database
+		host, err := repo.DB.GetHostByID(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		h = host
+	}
+
+	// NTS - tested: h.HostName = "Some host"
+	vars := make(jet.VarMap)
+	vars.Set("host", h) // NTS - pass variable h to template. h only has non-null value if id > 0.
+	// nts - can access h in "pending" etc tabs too. Rather than getting another var which holds repo.DB.GetServicesByStatus
+	// also, the status there is for active ones.
+
+	err := helpers.RenderPage(w, r, "host", vars, nil)
 	if err != nil {
 		printTemplateError(w, err)
 	}
+}
+
+// PostHost handles posting of host form
+func (repo *DBRepo) PostHost(w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.Atoi(chi.URLParam(r, "id"))
+
+	var h models.Host
+
+	if id > 0 {
+		// get the host from DB, to overwrite its values. Call update method
+		host, err := repo.DB.GetHostByID(id)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		h = host
+	}
+
+	// backend type validation skipped for now
+	h.HostName = r.Form.Get("host_name")
+	h.CanonicalName = r.Form.Get("canonical_name")
+	h.URL = r.Form.Get("url")
+	h.IP = r.Form.Get("ip")
+	h.IPV6 = r.Form.Get("ipv6")
+	h.Location = r.Form.Get("location")
+	h.OS = r.Form.Get("os")
+	active, _ := strconv.Atoi(r.Form.Get("active"))
+	// NTS - needed to enable returning 0/1. Set value to 1, because if not checked, form doesn't send value anyway.
+	// in case of unchecking, the value is "". -> somehow translates to 0.
+	h.Active = active
+
+	if id > 0 {
+		// update
+		err := repo.DB.UpdateHost(h)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	} else {
+		// insert new host
+		newID, err := repo.DB.InsertHost(h)
+		if err != nil {
+			log.Println(err)
+			helpers.ServerError(w, r, err)
+			return
+		}
+		h.ID = newID // NTS - h.ID isn't "obtained" from DB, but it's in the DB automatically.
+	}
+
+	repo.App.Session.Put(r.Context(), "flash", "Changes saved")
+	http.Redirect(w, r, fmt.Sprintf("/admin/host/%d", h.ID), http.StatusSeeOther)
+
 }
 
 // AllUsers lists all admin users
@@ -275,4 +372,107 @@ func show500(w http.ResponseWriter, r *http.Request) {
 
 func printTemplateError(w http.ResponseWriter, err error) {
 	_, _ = fmt.Fprint(w, fmt.Sprintf(`<small><span class='text-danger'>Error executing template: %s</span></small>`, err))
+}
+
+type serviceJSON struct {
+	OK bool `json:"ok"`
+}
+
+func (repo *DBRepo) ToggleServiceForHost(w http.ResponseWriter, r *http.Request) {
+	// just return JSON.
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+	}
+	var resp serviceJSON
+	resp.OK = true
+	// values grabbed from the request.
+	hostID, _ := strconv.Atoi(r.Form.Get("host_id"))
+	serviceID, _ := strconv.Atoi(r.Form.Get("service_id"))
+	active, _ := strconv.Atoi(r.Form.Get("active"))
+
+	// log.Println("Data:", hostID, serviceID, active)
+
+	err = repo.DB.UpdateHostServiceStatus(hostID, serviceID, active)
+	if err != nil {
+		log.Println(err)
+		resp.OK = false
+	}
+
+	// nts - write to client
+	out, _ := json.MarshalIndent(resp, "", "    ")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+}
+
+func (repo *DBRepo) SetSystemPref(w http.ResponseWriter, r *http.Request) {
+	prefName := r.PostForm.Get("pref_name")   // nts - e.g. monitoring_live
+	prefValue := r.PostForm.Get("pref_value") // js.jet I created form data for these.
+
+	var resp jsonResp
+	resp.OK = true
+	resp.Message = ""
+
+	// updatesyspref doesn't change ID num, because I'm not "establishing" new syspref.
+	err := repo.DB.UpdateSystemPref(prefName, prefValue)
+	if err != nil {
+		resp.OK = false
+		resp.Message = err.Error()
+	}
+
+	// update value in application-wide config (to prevent toggle off in one page, but toggle is still on on another.)
+	repo.App.PreferenceMap["monitoring_live"] = prefValue
+
+	out, _ := json.MarshalIndent(resp, "", "	")
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
+}
+
+// ToggleMonitoring turns monitoring on and off (NTS - this calls start-monitoring. But start-monitoring void if setsyspref not yet completed (hence fix in jet.js))
+func (repo *DBRepo) ToggleMonitoring(w http.ResponseWriter, r *http.Request) {
+	enabled := r.PostForm.Get("enabled")
+
+	if enabled == "1" {
+		// start monitoring
+		log.Println("Turning monitoring on")
+		repo.App.PreferenceMap["monitoring_live"] = "1" // since this is one off, not bother with js async functions
+		repo.StartMonitoring()
+		repo.App.Scheduler.Start()
+	} else {
+		// stop monitoring
+		log.Println("Turning monitoring off")
+		repo.App.PreferenceMap["monitoring_live"] = "0"
+		// remove all items in map from schedule (i.e. the value in the pair)
+		for _, x := range repo.App.MonitorMap {
+			repo.App.Scheduler.Remove(x) // NTS: _ is the key, x is the value -> for go looping.
+		}
+
+		// empty the monitor map (by deleting key as well, after del value above)
+		for k := range repo.App.MonitorMap {
+			delete(repo.App.MonitorMap, k) // map, then key.
+		}
+		// delete all entries from schedule - to make sure it's empty.
+		for _, i := range repo.App.Scheduler.Entries() {
+			repo.App.Scheduler.Remove(i.ID)
+		}
+
+		repo.App.Scheduler.Stop()
+
+		data := make(map[string]string)
+		data["message"] = "Monitoring is off..."
+
+		// nts - need to listen to event too, else nothing happens
+
+		err := app.WsClient.Trigger("public-channel", "app-stopping", data) // nts - use js onn client
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	var resp jsonResp
+	resp.OK = true
+
+	out, _ := json.MarshalIndent(resp, "", "	")
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
 }

@@ -41,6 +41,7 @@ function Prompt() {
             }
         })
 
+        // Toast.fire then takes in add'l parameters specified by user input (for now, four params as contained by c)
         Toast.fire({
             icon: icon,
             title: msg,

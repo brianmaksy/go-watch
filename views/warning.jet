@@ -35,9 +35,24 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr>
-                    <td colspan="5">No services</td>
-                </tr>
+                    {{if len(host_services) > 0 }}
+
+                        {{range host_services}}
+                        <tr>
+                            <td><a href="/admin/host/{{.HostID}}#warning-content">{{.HostName}}</a></td>
+                            <td>
+                                <span class="badge bg-info">{{.Service.ServiceName}}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning">{{.Status}}</span> 
+                            </td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="4">No services</td>
+                        </tr>
+                    {{end}}
                 </tbody>
             </table>
         </div>

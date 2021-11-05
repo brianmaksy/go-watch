@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/brianmaksy/go-watch/internal/handlers"
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 )
 
 func routes() http.Handler {
@@ -24,7 +24,7 @@ func routes() http.Handler {
 	mux.Get("/user/logout", handlers.Repo.Logout)
 
 	// test route
-	mux.Get("/pusher-test", handlers.Repo.TestPusher)
+	// mux.Get("/pusher-test", handlers.Repo.TestPusher)
 
 	mux.Route("/pusher", func(mux chi.Router) {
 		mux.Use(Auth) // privileged access
@@ -61,9 +61,17 @@ func routes() http.Handler {
 		// schedule
 		mux.Get("/schedule", handlers.Repo.ListEntries)
 
+		// preferences
+		mux.Post("/preference/ajax/set-system-pref", handlers.Repo.SetSystemPref)
+		mux.Post("/preference/ajax/toggle-monitoring", handlers.Repo.ToggleMonitoring)
+
 		// hosts
 		mux.Get("/host/all", handlers.Repo.AllHosts)
 		mux.Get("/host/{id}", handlers.Repo.Host)
+		mux.Post("/host/{id}", handlers.Repo.PostHost)
+		mux.Post("/host/ajax/toggle-service", handlers.Repo.ToggleServiceForHost)
+		mux.Get("/perform-check/{id}/{oldStatus}", handlers.Repo.TestCheck)
+
 	})
 
 	// static files

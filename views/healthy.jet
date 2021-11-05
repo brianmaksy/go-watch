@@ -35,9 +35,26 @@
             </tr>
             </thead>
             <tbody>
+            {{if len(host_services) > 0 }}
+                {{ range host_services }}
+                <tr>
+                    <td>
+                        <a href="/admin/host/{{.HostID}}#healthy-content">{{.HostName}}
+                        </a>
+                    </td>
+                    <td><span class="badge bg-info">{{.Service.ServiceName}}</span>                        
+                    </td>
+                    <td>
+                        <span class="badge bg-success">{{.Status}}</span> 
+                    </td>
+                    <td>Message</td>
+                </tr>
+                {{ end }}
+            {{ else }}
             <tr>
-                <td colspan="5">No services</td>
+                <td colspan="4">No services</td>
             </tr>
+            {{ end }}
             </tbody>
         </table>
     </div>

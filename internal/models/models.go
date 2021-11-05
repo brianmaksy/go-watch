@@ -39,3 +39,46 @@ type Preference struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
+
+// Host is the model for hosts
+type Host struct {
+	ID            int
+	HostName      string
+	CanonicalName string
+	URL           string
+	IP            string
+	IPV6          string
+	Location      string
+	OS            string
+	Active        int
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	HostServices  []HostService
+}
+
+// model for services
+type Services struct {
+	ID          int
+	ServiceName string
+	Active      int
+	Icon        string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// HostService is the model for host services
+// need check service up or down.
+type HostService struct {
+	ID             int
+	HostID         int
+	ServiceID      int
+	Active         int
+	ScheduleNumber int // ohw often we check it (?)
+	ScheduleUnit   string
+	Status         string
+	LastCheck      time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Service        Services
+	HostName       string // not part of database, but for convenient in GetServicesByStatus database function
+}
