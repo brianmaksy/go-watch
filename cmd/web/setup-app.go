@@ -157,6 +157,12 @@ func setupApp() (*string, error) {
 
 	go handlers.Repo.StartMonitoring()
 
+	// nts - do actually need this here: (to start monitoring when start app)?
+	// otherwise need to turn on and off again.
+	if app.PreferenceMap["monitoring_live"] == "1" {
+		app.Scheduler.Start()
+	}
+
 	helpers.NewHelpers(&app)
 
 	return insecurePort, err

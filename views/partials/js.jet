@@ -10,6 +10,7 @@
         disabledTransports: []
     }); 
 
+    // not to conflat this channel with go lang channel 
     let publicChannel = pusher.subscribe("public-channel"); 
 
     // to match the string in start-monitoring.go
@@ -19,6 +20,23 @@
 
     publicChannel.bind("app-stopping", function (data) {
         warningAlert(data.message);
+    })
+
+    publicChannel.bind("host-service-status-changed", function(data){
+        successAlert(data.message);
+    })
+
+    publicChannel.bind("host-service-count-changed", function(data){
+        // if receive event AND on that page 
+        let healthyCountExists = !!document.getElementById("healthy_count"); // turns into boolean 
+        // nts - this ID (from dashboard.jet) must be unique, so changes are only made in dashboard page. 
+        if (healthyCountExists) {
+            // change the "no_healthy" to data.healthy_count got from ScheduledCheck func in perform-checks.go
+            document.getElementById("healthy_count").innerHTML = data.healthy_count; 
+            document.getElementById("problem_count").innerHTML = data.problem_count;
+            document.getElementById("pending_count").innerHTML = data.pending_count;
+            document.getElementById("warning_count").innerHTML = data.warning_count;
+        }
     })
 
     // things we want to look for 

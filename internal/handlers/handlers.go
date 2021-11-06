@@ -23,6 +23,7 @@ var Repo *DBRepo
 var app *config.AppConfig
 
 // DBRepo is the db repo
+// nts - this struct has various methods, i.e. those with receiver (repo *DBRepo)
 type DBRepo struct {
 	App *config.AppConfig
 	DB  repository.DatabaseRepo
@@ -50,7 +51,7 @@ func (repo *DBRepo) AdminDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := make(jet.VarMap) // jet template rendering engine.
+	vars := make(jet.VarMap) // jet template rendering engine - allow template to use these var
 	vars.Set("no_healthy", healthy)
 	vars.Set("no_problem", problem)
 	vars.Set("no_pending", pending)
