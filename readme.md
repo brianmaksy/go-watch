@@ -13,15 +13,23 @@ This is a project largely following a Golang course in Websockets. It is a servi
 First, run ipê is running (if you're using ipê), and then run. 
 
 On Mac/Linux
+
 **
+
 cd ipe
+
 ./ipe 
+
 ./run.sh (in a new terminal)
 
 
 On Windows
+
 **
+
 cd ipe
+
 .\ipe
+
 .\run.bat (in a new terminal)
 
