@@ -10,21 +10,198 @@
         disabledTransports: []
     }); 
 
-    // not to conflat this channel with go lang channel 
+    // nts - not to conflate this channel with go lang channel 
+    // nts - .user can be accessed since it's part of td. 
+    // nts - channels must begin with either public or private 
     let publicChannel = pusher.subscribe("public-channel"); 
+    let privateChannel = pusher.subscribe("private-channel-{{.User.ID}}")
 
-    // to match the string in start-monitoring.go
+    privateChannel.bind("private-message", function(data) {
+        attention.alert({
+            html: data.message,
+            icon: 'success',
+        })
+    })
+
+    // to match the string in start-monitoring
     publicChannel.bind("app-starting", function (data) {
+        let toggle = document.getElementById("monitoring-live");
+        toggle.checked = true;
         successAlert(data.message);
     })
 
     publicChannel.bind("app-stopping", function (data) {
         warningAlert(data.message);
+        let toggle = document.getElementById("monitoring-live");
+        toggle.checked = false;
+        
+
+        let scheduleTableExists = !!document.getElementById("schedule-table");
+        if (scheduleTableExists) {
+            let scheduleTable = document.getElementById("schedule-table");
+            scheduleTable.tBodies[0].innerHTML = ""; 
+
+            let newRow = scheduleTable.tBodies[0].insertRow(-1); 
+            let newCell = newRow.insertCell(0);
+            newCell.setAttribute("colspan", "5");
+            newCell.innerHTML = "No scheduled checks";
+        }
     })
 
-    publicChannel.bind("host-service-status-changed", function(data){
-        successAlert(data.message);
+    publicChannel.bind("schedule-item-removed-event", function(data) {
+        // exec if ID matches 
+        let rowExists = !!document.getElementById("schedule-" + data.host_service_id);
+        if (rowExists) {
+            let row = document.getElementById("schedule-" + data.host_service_id);
+            row.parentNode.removeChild(row);
+
+            // check to see if we need to add a no scheduled checks row 
+            let currentTable = document.getElementById("schedule-table");
+            if (currentTable.rows.length === 1) {
+                // add a row 
+                let newRow = currentTable.tBodies[0].insertRow(-1);
+                let newCell = newRow.insertCell(0);
+                newCell.setAttribute("colspan", "5");
+                newCell.innerHTML = "No scheduled checks";
+            }
+        }
     })
+
+    publicChannel.bind("schedule-changed-event", function(data) {
+        let scheduleTableExists = !!document.getElementById("schedule-table");
+        if (scheduleTableExists) {
+            let scheduleTable = document.getElementById("schedule-table");
+            
+            // check to see if table contains "no scheduled checks!"
+            let tableContent = scheduleTable.innerHTML;
+            if (tableContent.includes("No scheduled checks")) {
+                let rowCount = scheduleTable.rows.length;
+                for (let i = rowCount -1; i > 0; i--) {
+                    scheduleTable.deleteRow(i);
+                }
+            }
+            // delete existing row 
+            let rowExists = !!document.getElementById("schedule-" + data.host_service_id);
+            if (rowExists) {
+                let row = document.getElementById("schedule-" + data.host_service_id);
+                row.parentNode.removeChild(row);
+            }
+            let newRow = scheduleTable.tBodies[0].insertRow(-1);
+            newRow.setAttribute("id", "schedule-" + data.host_service_id);
+
+            let newCell = newRow.insertCell(0);
+            let newText = document.createTextNode(data.host);
+            newCell.appendChild(newText);
+
+            newCell = newRow.insertCell(1);
+            newText = document.createTextNode(data.service);
+            newCell.appendChild(newText);
+
+            newCell = newRow.insertCell(2);
+            newText = document.createTextNode(data.schedule);
+            newCell.appendChild(newText);
+
+            newCell = newRow.insertCell(3);
+            newText = document.createTextNode(data.last_run);
+            newCell.appendChild(newText);
+
+            newCell = newRow.insertCell(4);
+            // nts - just in case error from scheduler? 
+            if (data.next_run === undefined) {
+                newText = document.createTextNode("Pending")
+            } else {
+                newText = document.createTextNode(data.next_run);
+            }
+            newCell.appendChild(newText);
+        }
+    })
+
+    publicChannel.bind("host-service-status-changed", function(data) {
+        attention.toast({
+            msg: data.message,
+            icon: 'info',
+            timer: 30000,
+            showCloseButton: true,
+        })
+
+        // remove existing table rows if exist - by building string 
+        deleteHostServiceRow(data.host_service_id);
+        
+        // update tables if they exist 
+        updateHostServiceTable(data);
+        
+    })
+
+    function deleteHostServiceRow(hostServiceID) {
+        // nts - hostServiceID is a string 
+        // nts - will remove from the place wherever the host_service is 
+        // (found via host_service_id passed in testServiceForHost in perform-checks.go
+        let exists = !!document.getElementById("host-service-" + hostServiceID);
+        if (exists) {
+            let row = document.getElementById("host-service-" + hostServiceID);
+            row.parentNode.removeChild(row);
+
+            // if this was the last row, add a no "services" row. 
+
+            let tables = ["healthy", "pending", "warning", "problem"];
+
+            for (let i = 0; i < tables.length; i++) {
+                let currentTableExists = !!document.getElementById(tables[i] + "-table");
+                if (currentTableExists) {
+                    let currentTable = document.getElementById(tables[i] + "-table");
+                    if (currentTable.rows.length === 1) {
+                        let newRow = currentTable.tBodies[0].insertRow(-1);
+                        let newCell = newRow.insertCell(0);
+                        newCell.setAttribute("colspan", "4");
+                        newCell.innerHTML = "No services";
+                    }
+                }
+            }
+        }
+    }
+
+    function updateHostServiceTable(data) {
+        let tableExists = !!document.getElementById(data.status + "-table");
+        if (tableExists) {
+            // add row 
+            let tableRef = document.getElementById(data.status + "-table");
+
+            // remove "no services" row if empty - without assigning js ID to the tr of "no services"
+            let tableContent = tableRef.innerHTML;
+            if (tableContent.includes("No services")) {
+                tableRef.deleteRow(1);
+            }
+            
+
+            let newRow = tableRef.tBodies[0].insertRow(-1); // slots before existing row, hence -1. 
+
+            // add a js id to new row 
+            newRow.setAttribute("id", "host-service-" + data.host_service_id);
+
+            // insert the first td 
+            let newCell = newRow.insertCell(0);
+            newCell.innerHTML = `
+                <a href="/admin/host/${data.host_id}#healthy-content">${data.host_name}
+                </a>`;
+
+            // insert second td 
+            newCell = newRow.insertCell(1);
+            newCell.innerHTML = `
+                <span class="${data.icon}"></span> ${data.service_name}
+                <span class="badge bg-secondary pointer" onclick="checkNow(${data.host_service_id}, '${data.status}')">
+                    Check Now
+                </span>`;
+
+            // insert third td 
+            newCell = newRow.insertCell(2);
+            if (data.status !== "pending") {
+                newCell.innerHTML = `${data.last_check}`;
+            } else {
+                newCell.innerHTML = "Pending";
+            } 
+    }
+}
+
 
     publicChannel.bind("host-service-count-changed", function(data){
         // if receive event AND on that page 
@@ -39,13 +216,6 @@
         }
     })
 
-    // things we want to look for 
-    // - service goes down
-    // - service comes up 
-    // - service status changed 
-    // - schedule changed 
-    // - monitoring is turned off 
-    // - next-run event changes 
 
     let attention = Prompt();
 
@@ -159,4 +329,35 @@
             }
         }
     }
+
+    function checkNow(id, oldStatus) {
+                console.log("Clicked checkNow()")
+                // nts - fetch gets the url
+                fetch('/admin/perform-check/' + id + '/' + oldStatus)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Ok:", data.ok, "message:", data.message)
+
+                        if (data.ok) {
+                            if (data.old_status !== data.new_status) {
+                                attention.toast({
+                                msg: data.message, 
+                                icon: "info",
+                                timer: 60000,
+                                showCloseButton: true,
+                            })
+                            } else {
+                                attention.toast({
+                                msg: "Service is still in " + data.new_status + "state", 
+                                icon: "info",
+                                timer: 5000,
+                                showCloseButton: true,
+                            })
+                            }
+                            
+                        } else {
+                            errorAlert("Something went wrong");
+                        }
+                    });
+            }
 </script>

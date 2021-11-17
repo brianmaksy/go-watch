@@ -64,6 +64,7 @@ func (repo *DBRepo) StartMonitoring() {
 			}
 
 			app.MonitorMap[x.ID] = scheduleID
+			// log.Printf("%s", x.HostName)
 
 			// for each of these task, to broadcast over websockets the fact that the service is scheduled.
 			// i.e. pending
@@ -88,7 +89,7 @@ func (repo *DBRepo) StartMonitoring() {
 			}
 			payload["schedule"] = fmt.Sprintf("@every %d%s", x.ScheduleNumber, x.ScheduleUnit)
 
-			// first to send is next-run-event
+			// first to send is next-run-event (next iteration)
 			err = app.WsClient.Trigger("public-channel", "next-run-event", payload)
 			if err != nil {
 				log.Println(err)
@@ -101,5 +102,9 @@ func (repo *DBRepo) StartMonitoring() {
 			}
 
 		}
+		// nts - check to see which services being monitored.
+		// for k, v := range app.MonitorMap {
+		// 	log.Printf("serviceID is %d and cron id is %v", k, v)
+		// }
 	}
 }

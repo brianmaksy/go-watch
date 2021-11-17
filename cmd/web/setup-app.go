@@ -146,7 +146,7 @@ func setupApp() (*string, error) {
 	monitorMap := make(map[int]cron.EntryID)
 	app.MonitorMap = monitorMap
 
-	// create a timer - wil hold our schedule
+	// create a timer - will hold our schedule
 	localZone, _ := time.LoadLocation("Local")
 	scheduler := cron.New(cron.WithLocation(localZone), cron.WithChain(
 		cron.DelayIfStillRunning(cron.DefaultLogger),

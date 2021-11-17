@@ -10,6 +10,7 @@
 {{end}}
 
 {{block cardContent()}}
+
     <div class="row">
         <div class="col">
             <ol class="breadcrumb mt-1">
@@ -36,19 +37,29 @@
                 <tbody>
                 {{if len(host_services) > 0 }}
                     {{range host_services}}
-                    <tr>
+                    <tr id="host-service-{{.ID}}">
                         <td>
                             <a href="/admin/host/{{.HostID}}#pending-content">
                             {{.HostName}}
                             </a>
                         </td>
-                        <td>
-                            <span class="badge bg-info">{{.Service.ServiceName}}</span>
+                        <td> 
+                            <span class="{{.Service.Icon}}"></span>
+                            {{.Service.ServiceName}}
+                            <span class="badge bg-secondary pointer" onclick="checkNow({{.ID}}, 'problem')">
+                                Check Now
+                            </span>
                         </td>
                         <td>
-                            <span class="badge bg-secondary-dark">{{.Status}}</span> 
+                            {{if dateAfterYearOne(.LastCheck)}}
+                                {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                            {{else}}
+                                Pending
+                            {{end}}
                         </td>
-                        <td>    </td>
+                        <td>
+                            {{.LastMessage}}
+                        </td>
                     </tr>
                     {{end}}
                 {{else}}

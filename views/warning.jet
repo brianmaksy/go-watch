@@ -11,6 +11,7 @@
 
 
 {{block cardContent()}}
+
     <div class="row">
         <div class="col">
             <ol class="breadcrumb mt-1">
@@ -25,7 +26,7 @@
     <div class="row">
         <div class="col">
 
-            <table class="table table-condensed table-striped">
+            <table id="warning-table" class="table table-condensed table-striped">
                 <thead>
                 <tr>
                     <th>Host</th>
@@ -36,15 +37,23 @@
                 </thead>
                 <tbody>
                     {{if len(host_services) > 0 }}
-
                         {{range host_services}}
-                        <tr>
-                            <td><a href="/admin/host/{{.HostID}}#warning-content">{{.HostName}}</a></td>
+                        <tr id="host-service-{{.ID}}"> 
                             <td>
-                                <span class="badge bg-info">{{.Service.ServiceName}}</span>
+                                <a href="/admin/host/{{.HostID}}#warning-content">{{.HostName}}</a></td>
+                            <td> 
+                                <span class="{{.Service.Icon}}"></span>
+                                {{.Service.ServiceName}}
                             </td>
                             <td>
-                                <span class="badge bg-warning">{{.Status}}</span> 
+                                {{if dateAfterYearOne(.LastCheck)}}
+                                    {{dateFromLayout(.LastCheck, "2006-01-02 15:04")}}
+                                {{else}}
+                                    Pending
+                                {{end}}
+                            </td>
+                            <td>
+                                {{.LastMessage}}
                             </td>
                         </tr>
                         {{end}}
